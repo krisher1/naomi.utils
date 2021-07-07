@@ -185,5 +185,22 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
   dat$sexpaid12m <- as.integer(dat$sexpaid12m)
   dat$sti12m <- as.integer(dat$sti12m)
 
-  dplyr::select(dat, SurveyId, individual_id, eversex, sex12m, sexcohab, sexnonreg, sexpaid12m, sti12m)
+  # Alterations to make the outcomes closer to being categorical
+  dat %>%
+    dplyr::select(SurveyId, individual_id, eversex, sex12m, sexcohab, sexnonreg, sexpaid12m, sti12m) %>%
+    dplyr::mutate(
+      # When sex12m = 0, set sexpaid12m = 0
+      # Being paid for sex in the last year requires having had sex in the past year
+      sexpaid12m = ifelse(sex12m == 0, 0, sexpaid12m),
+      # When sex12m = 1, set eversex = 1
+      # Having sex in the past year implies having ever had sex
+      eversex = ifelse(sex12m == 1, 1, eversex),
+      # Set all rows with sexpaid12m = 1 to be in that category
+      # This is questionable: being paid for sex doesn't imply not being in sexcohab or sexnonreg
+      # But this is the assumption of the risk categories
+      eversex = ifelse(sexpaid12m == 1, 1, eversex),
+      sex12m = ifelse(sexpaid12m == 1, 1, sex12m),
+      sexcohab = ifelse(sexpaid12m == 1, 0, sexcohab),
+      sexnonreg = ifelse(sexpaid12m == 1, 0, sexnonreg),
+    )
 }
