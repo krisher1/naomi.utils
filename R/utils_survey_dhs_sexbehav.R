@@ -193,6 +193,8 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
   dat$giftsvar <- as.integer(dat$giftsvar)
 
   # Alterations to make the outcomes closer to being categorical
+  # As well as adding in a new variable, sexcohabplus, which is sexcohab with all
+  # the individuals in sexpaid12m added on as well
   dat %>%
     dplyr::select(SurveyId, individual_id, eversex, sex12m, sexcohab, sexnonreg, sexpaid12m, sti12m, giftsvar) %>%
     dplyr::mutate(
@@ -209,5 +211,7 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
       sex12m = ifelse(sexpaid12m == 1, 1, sex12m),
       sexcohab = ifelse(sexpaid12m == 1, 0, sexcohab),
       sexnonreg = ifelse(sexpaid12m == 1, 0, sexnonreg),
+      # Create new sexcohabplus variable
+      sexcohabplus = ifelse(sexpaid12m == 1, 1, sexcohab)
     )
 }
