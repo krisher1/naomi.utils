@@ -5,26 +5,25 @@
 #' @return Sexual behaviour categorical variables
 #' @export
 extract_sexbehav_phia <- function(ind, survey_id) {
-  #' All of the sexual behaviour variables we're interested in
   sb_vars <- c(
-    "firstsxage", #' Age at first vaginal sex
-    "firstsxagedk", #' Age at first vaginal sex (don't know)
-    "part12monum", #' Total sexual partners (past 12 months)
-    "part12modkr", #' Total sexual partners (past 12 months) (don't know)
-    paste0("partlivew", 1:3), #' Does partner i live in this household
-    paste0("partrelation", 1:3), #' Relationship to partner i
-    paste0("partlastsup", 1:3), #' Expectation of gifts, payment, other help with partner i
-    "sellsx12mo", #' Had sex for money, gifts during past 12 months
-    "buysx12mo" #' Paid money or given gifts for sex during past 12 months
+    "firstsxage", # Age at first vaginal sex
+    "firstsxagedk", # Age at first vaginal sex (don't know)
+    "part12monum", # Total sexual partners (past 12 months)
+    "part12modkr", # Total sexual partners (past 12 months) (don't know)
+    paste0("partlivew", 1:3), # Does partner i live in this household
+    paste0("partrelation", 1:3), # Relationship to partner i
+    paste0("partlastsup", 1:3), # Expectation of gifts, payment, other help with partner i
+    "sellsx12mo", # Had sex for money, gifts during past 12 months
+    "buysx12mo" # Paid money or given gifts for sex during past 12 months
   )
 
-  #' The following other variables may be of future interest, but are not in all the surveys:
-  #' * analsxever: Age at first anal sex
-  #' * lifetimesex: Total lifetime sexual partners
-  #' * lifetimesexdk: Total lifetime sexual partners
-  #' * paste0("partlastsxtimed", 1:3): How long since last sex with partner i
+  # The following other variables may be of future interest, but are not in all the surveys:
+  # * analsxever: Age at first anal sex
+  # * lifetimesex: Total lifetime sexual partners
+  # * lifetimesexdk: Total lifetime sexual partners
+  # * paste0("partlastsxtimed", 1:3): How long since last sex with partner i
 
-  #' Fix issues with particular surveys having different variable names
+  # Fix issues with particular surveys having different variable names
   if(survey_id %in% c("ZWE2016PHIA")) { ind <- rename(ind, "part12modkr" = "part12monumdk") }
   if(survey_id %in% c("ZMB2016PHIA")) { ind <- rename(ind, "part12monum" = "part12mo") }
   if(survey_id %in% c("MWI2016PHIA")) { ind <- rename(ind, "par12modkr" = "part12monumdk") }
@@ -36,54 +35,54 @@ extract_sexbehav_phia <- function(ind, survey_id) {
     ) %>%
     select(survey_id, individual_id, tidyselect::any_of(sb_vars))
 
-  #' Fixes issue with e.g. some surveys not having paid sex questions
+  # Fixes issue with e.g. some surveys not having paid sex questions
   dat[setdiff(sb_vars, names(dat))] <- NA
 
   dat %>%
     mutate(
-      #' Reports sexual activity in the last 12 months
+      # Reports sexual activity in the last 12 months
       sex12m = case_when(
-        (is.na(firstsxage) & (firstsxagedk %in% c(96, -7))) ~ FALSE, #' 96 is code for no sex
+        (is.na(firstsxage) & (firstsxagedk %in% c(96, -7))) ~ FALSE, # 96 is code for no sex
         part12monum > 0 ~ TRUE,
-        part12modkr == -8 ~ TRUE, #' If don't know number of partners, assume > 1
+        part12modkr == -8 ~ TRUE, # If don't know number of partners, assume > 1
         TRUE ~ FALSE
       ),
-      #' Does not report sexual activity in the last 12 months
+      # Does not report sexual activity in the last 12 months
       nosex12m = case_when(
         sex12m == TRUE ~ FALSE,
         sex12m == FALSE ~ TRUE,
         is.na(sex12m) ~ NA
       ),
-      #' Reports sexual activity with exactly one cohabiting partner in the past 12 months
+      # Reports sexual activity with exactly one cohabiting partner in the past 12 months
       sexcohab = case_when(
         sex12m == FALSE ~ FALSE,
         (part12monum == 1) & (partlivew1 == 1) ~ TRUE,
         TRUE ~ FALSE
       ),
-      #' Reports one or more non-regular sexual partner
+      # Reports one or more non-regular sexual partner
       sexnonreg = case_when(
         nosex12m == TRUE ~ FALSE,
-        part12monum > 1 ~ TRUE, #' More than one partner
-        (part12monum == 1) & (partlivew1 == 2) ~ TRUE, #' One partner not cohabiting
+        part12monum > 1 ~ TRUE, # More than one partner
+        (part12monum == 1) & (partlivew1 == 2) ~ TRUE, # One partner not cohabiting
         TRUE ~ FALSE
       ),
-      #' Reports having exchanged gifts, cash, or anything else for sex in the past 12 months
+      # Reports having exchanged gifts, cash, or anything else for sex in the past 12 months
       sexpaid12m = case_when(
         sellsx12mo | buysx12mo ~ TRUE,
         (partrelation1 %in% c(6, 7) | partrelation2 %in% c(6, 7) | partrelation3 %in% c(6, 7)) ~ TRUE,
         TRUE ~ FALSE
       ),
-      #' Either sexnonreg or sexpaid12m
+      # Either sexnonreg or sexpaid12m
       sexnonregplus = case_when(
         sexnonreg == TRUE ~ TRUE,
         sexpaid12m == TRUE ~ TRUE,
         TRUE ~ FALSE
       ),
-      #' Just want the highest risk category that an individual belongs to
+      # Just want the highest risk category that an individual belongs to
       nosex12m = ifelse(sexcohab | sexnonreg | sexpaid12m, FALSE, nosex12m),
       sexcohab = ifelse(sexnonreg | sexpaid12m, FALSE, sexcohab),
       sexnonreg = ifelse(sexpaid12m, FALSE, sexnonreg),
-      #' Turn everything from TRUE / FALSE coding to 1 / 0
+      # Turn everything from TRUE / FALSE coding to 1 / 0
       across(sex12m:sexnonregplus, ~ as.numeric(.x))
     ) %>%
     select(-all_of(sb_vars))
