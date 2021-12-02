@@ -1,3 +1,9 @@
+#' Extract sexual behaviour categorical variables from PHIA surveys.
+#'
+#' @param ind Individuals dataset.
+#' @param survey_id The survey name.
+#' @return Sexual behaviour categorical variables
+#' @export
 extract_sexbehav_phia <- function(ind, survey_id) {
   #' All of the sexual behaviour variables we're interested in
   sb_vars <- c(
@@ -83,6 +89,11 @@ extract_sexbehav_phia <- function(ind, survey_id) {
     select(-all_of(sb_vars))
 }
 
+#' Check that each individual is assigned to one and only one risk category.
+#'
+#' @param survey_sexbehav Output of e.g. `extract_sexbehav_phia`.
+#' @return Rows of `survey_sexbehav` not in exactly one category.
+#' @export
 check_survey_sexbehav <- function(survey_sexbehav) {
   df <- survey_sexbehav %>%
     mutate(
