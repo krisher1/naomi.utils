@@ -10,6 +10,8 @@ calc_all_outcomes(
   split_vars,
   formula,
   extra_vars,
+  survey_meta,
+  areas,
   age_groups
 )
 }
