@@ -72,6 +72,11 @@ extract_sexbehav_phia <- function(ind, survey_id) {
         (partrelation1 %in% c(6, 7) | partrelation2 %in% c(6, 7) | partrelation3 %in% c(6, 7)) ~ TRUE,
         TRUE ~ FALSE
       ),
+      # Indicator for including any non-missing observations for selling sex (i.e. whether it was in the questionnaire)
+      giftsvar = case_when(
+        sum(!is.na(sellsx12mo)) > 0 ~ TRUE,
+        TRUE ~ FALSE
+      ),
       # Either sexnonreg or sexpaid12m
       sexnonregplus = case_when(
         sexnonreg == TRUE ~ TRUE,
