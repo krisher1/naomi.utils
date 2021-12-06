@@ -186,24 +186,16 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
   #                                 TRUE ~ FALSE)
 
   dat$SurveyId <- SurveyId
-  #dat$eversex <- as.integer(dat$eversex)
-  dat$sex12m <- as.integer(dat$sex12m)
-  dat$nosex12m <- as.integer(dat$nosex12m)
-  dat$sexcohab <- as.integer(dat$sexcohab)
-  dat$sexnonreg <- as.integer(dat$sexnonreg)
-  dat$sexpaid12m <- as.integer(dat$sexpaid12m)
-  #dat$sti12m <- as.integer(dat$sti12m)
-  dat$giftsvar <- as.integer(dat$giftsvar)
 
   # Alterations to make the outcomes closer to being categorical
   # As well as adding in a new variable, sexnonregplus, which is sexnonreg with all
   # the individuals in sexpaid12m added on as well
   dat %>%
-    dplyr::select(SurveyId, individual_id, sex12m, sexcohab, sexnonreg, sexpaid12m, giftsvar) %>%
+    dplyr::select(SurveyId, individual_id, sex12m, nosex12m, sexcohab, sexnonreg, sexpaid12m, giftsvar) %>%
     dplyr::mutate(
-      # When sex12m = 0, set sexpaid12m = 0
+      # When nosex12m = 1, set sexpaid12m = 0
       # Being paid for sex in the last year requires having had sex in the past year
-      sexpaid12m = ifelse(sex12m == 0, 0, sexpaid12m),
+      sexpaid12m = ifelse(nosex12m == 1, 0, sexpaid12m),
       # # When sex12m = 1, set eversex = 1
       # # Having sex in the past year implies having ever had sex
       # eversex = ifelse(sex12m == 1, 1, eversex),
@@ -211,10 +203,12 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
       # This is questionable: being paid for sex doesn't imply not being in sexcohab or sexnonreg
       # But this is the assumption of the risk categories
       # eversex = ifelse(sexpaid12m == 1, 1, eversex),
-      sex12m = ifelse(sexpaid12m == 1, 1, sex12m),
+      nosex12m = ifelse(sexpaid12m == 1, 0, nosex12m),
       sexcohab = ifelse(sexpaid12m == 1, 0, sexcohab),
       sexnonreg = ifelse(sexpaid12m == 1, 0, sexnonreg),
       # Create new sexnonregplus variable
-      sexnonregplus = ifelse(sexpaid12m == 1, 1, sexnonreg)
+      sexnonregplus = ifelse(sexpaid12m == 1, 1, sexnonreg),
+      # Turn everything from TRUE / FALSE coding to 1 / 0
+      dplyr::across(sex12m:sexnonregplus, ~ as.numeric(.x))
     )
 }
