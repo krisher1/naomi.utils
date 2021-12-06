@@ -101,14 +101,14 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
 
   ## # Code sexual behaviour outcomes
 
-  # eversex = whether participant has ever had sex
-  # Recode v531 - age of sexual debut - anyone coded 0 hasn't had sex,
-  # 97 = inconsistent, 98 = Don't Know, 99 = Missing
-  # Assume if you don't know the age of sexual debut that you have had sex
-  # Should inconsistents be TRUE instead of missing?
-  dat$eversex <- dplyr::case_when(dat$v531 %in% c(97,99) ~ NA,
-                                  dat$v531 == 98 ~ TRUE,
-                                  TRUE ~ dat$v531 > 0)
+  # # eversex = whether participant has ever had sex
+  # # Recode v531 - age of sexual debut - anyone coded 0 hasn't had sex,
+  # # 97 = inconsistent, 98 = Don't Know, 99 = Missing
+  # # Assume if you don't know the age of sexual debut that you have had sex
+  # # Should inconsistents be TRUE instead of missing?
+  # dat$eversex <- dplyr::case_when(dat$v531 %in% c(97,99) ~ NA,
+  #                                 dat$v531 == 98 ~ TRUE,
+  #                                 TRUE ~ dat$v531 > 0)
 
   # sex12m = whether reports sexual activity in past 12 mo
   # Recode v766b - number of partners in the past 12 mo
@@ -116,6 +116,8 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
   dat$sex12m <- dplyr::case_when(dat$v766b == 0 ~ FALSE,
                                   dat$v766b == 99 ~ NA,
                                   TRUE ~ dat$v766b > 0)
+
+  dat$nosex12m <- 1 - dat$sex12m
 
   # sexcohab = whether reports sex with only one cohabiting partner in the past
   # 12 mo.  Recode v766b (# partners in past 12 mo) and v767a-c (relationship
@@ -172,31 +174,32 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
   # on question v791a (i.e. whether it was in the questionnaire)
   dat <- dplyr::mutate(dat, giftsvar = ifelse(sum(!is.na(v791a))>0,1,0))
 
-  # sti12m = whether the person reports having had an STI, genital sore/ulcer, or
-  # genital discharge in the past 12 months (recode v763a-c)
-  # Only set as NA if were a don't know/missing for all three of the questions
-  dat$sti12m <- dplyr::case_when(dat$v763a == 1 | dat$v763b == 1 |
-                                    dat$v763c == 1 ~ TRUE,
-                                  dat$v763a %in% c(8,9) & dat$v763b %in% c(8,9) &
-                                    dat$v763c %in% c(8,9) ~ NA,
-                                  is.na(dat$v763a) & is.na(dat$v763b) &
-                                    is.na(dat$v763c) ~ NA,
-                                  TRUE ~ FALSE)
+  # # sti12m = whether the person reports having had an STI, genital sore/ulcer, or
+  # # genital discharge in the past 12 months (recode v763a-c)
+  # # Only set as NA if were a don't know/missing for all three of the questions
+  # dat$sti12m <- dplyr::case_when(dat$v763a == 1 | dat$v763b == 1 |
+  #                                   dat$v763c == 1 ~ TRUE,
+  #                                 dat$v763a %in% c(8,9) & dat$v763b %in% c(8,9) &
+  #                                   dat$v763c %in% c(8,9) ~ NA,
+  #                                 is.na(dat$v763a) & is.na(dat$v763b) &
+  #                                   is.na(dat$v763c) ~ NA,
+  #                                 TRUE ~ FALSE)
 
   dat$SurveyId <- SurveyId
-  dat$eversex <- as.integer(dat$eversex)
+  #dat$eversex <- as.integer(dat$eversex)
   dat$sex12m <- as.integer(dat$sex12m)
+  dat$nosex12m <- as.integer(dat$nosex12m)
   dat$sexcohab <- as.integer(dat$sexcohab)
   dat$sexnonreg <- as.integer(dat$sexnonreg)
   dat$sexpaid12m <- as.integer(dat$sexpaid12m)
-  dat$sti12m <- as.integer(dat$sti12m)
+  #dat$sti12m <- as.integer(dat$sti12m)
   dat$giftsvar <- as.integer(dat$giftsvar)
 
   # Alterations to make the outcomes closer to being categorical
   # As well as adding in a new variable, sexnonregplus, which is sexnonreg with all
   # the individuals in sexpaid12m added on as well
   dat %>%
-    dplyr::select(SurveyId, individual_id, eversex, sex12m, sexcohab, sexnonreg, sexpaid12m, sti12m, giftsvar) %>%
+    dplyr::select(SurveyId, individual_id, sex12m, sexcohab, sexnonreg, sexpaid12m, giftsvar) %>%
     dplyr::mutate(
       # When sex12m = 0, set sexpaid12m = 0
       # Being paid for sex in the last year requires having had sex in the past year
