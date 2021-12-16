@@ -68,7 +68,8 @@ extract_sexbehav_phia <- function(ind, survey_id) {
       ),
       # Reports having exchanged gifts, cash, or anything else for sex in the past 12 months
       sexpaid12m = case_when(
-        sellsx12mo | buysx12mo ~ TRUE,
+        nosex12m == TRUE ~ FALSE,
+        (sellsx12mo == 1) | (buysx12mo == 1) ~ TRUE,
         (partrelation1 %in% c(6, 7) | partrelation2 %in% c(6, 7) | partrelation3 %in% c(6, 7)) ~ TRUE,
         TRUE ~ FALSE
       ),
