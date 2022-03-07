@@ -11,7 +11,17 @@ extract_sexbehav_phia <- function(ind, survey_id) {
     "part12monum", # Total sexual partners (past 12 months)
     "part12modkr", # Total sexual partners (past 12 months) (don't know)
     paste0("partlivew", 1:3), # Does partner i live in this household
-    paste0("partrelation", 1:3), # Relationship to partner i
+    # Relationship to partner i, where:
+    # 1 = Husband or wife
+    # 2 = Live-in partner
+    # 3 = Partner (not living with)
+    # 4 = Ex-spouse or partner
+    # 5 = Friend or acquantance
+    # 6 = Sex worker
+    # 7 = Sex worker client
+    # 8 = Stranger
+    # 96 = Other
+    paste0("partrelation", 1:3),
     paste0("partlastsup", 1:3), # Expectation of gifts, payment, other help with partner i
     "sellsx12mo", # Had sex for money, gifts during past 12 months
     "buysx12mo" # Paid money or given gifts for sex during past 12 months
@@ -22,6 +32,9 @@ extract_sexbehav_phia <- function(ind, survey_id) {
   # * lifetimesex: Total lifetime sexual partners
   # * lifetimesexdk: Total lifetime sexual partners
   # * paste0("partlastsxtimed", 1:3): How long since last sex with partner i
+
+  # The categories considered "not cohabiting" (trying to match with DHS as much as possible)
+  cas_cats <- c(3, 4, 5, 6, 7, 8, 96)
 
   # Fix issues with particular surveys having different variable names
   if(survey_id %in% c("ZWE2016PHIA")) { ind <- rename(ind, "part12modkr" = "part12monumdk") }
@@ -56,14 +69,15 @@ extract_sexbehav_phia <- function(ind, survey_id) {
       # Reports sexual activity with exactly one cohabiting partner in the past 12 months
       sexcohab = case_when(
         sex12m == FALSE ~ FALSE,
-        (part12monum == 1) & (partlivew1 == 1) ~ TRUE,
+        (part12monum == 1) & ((!partrelation1 %in% cas_cats) & (!partrelation2 %in% cas_cats) & (!partrelation3 %in% cas_cats)) ~ TRUE,
         TRUE ~ FALSE
       ),
       # Reports one or more non-regular sexual partner
       sexnonreg = case_when(
         nosex12m == TRUE ~ FALSE,
         part12monum > 1 ~ TRUE, # More than one partner
-        (part12monum == 1) & (partlivew1 == 2) ~ TRUE, # One partner not cohabiting
+        # One partner not cohabiting
+        (part12monum == 1) & ((partrelation1 %in% cas_cats) | (partrelation2 %in% cas_cats) | (partrelation3 %in% cas_cats)) ~ TRUE,
         TRUE ~ FALSE
       ),
       # Reports having exchanged gifts, cash, or anything else for sex in the past 12 months
