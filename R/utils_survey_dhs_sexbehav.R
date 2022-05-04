@@ -78,8 +78,12 @@ extract_sexbehav_dhs <- function(SurveyId, ird_path, mrd_path){
 
   message("Parsing IR/MR Sexual Behaviour datasets: ", SurveyId)
 
-  sb_vars <- c("v504", "v529", "v531", "v766b", "v767a", "v767b", "v767c", "v791a",
-               "v763a", "v763b", "v763c", "v501")
+  sb_vars <- c(
+    "v504", "v529", "v531",
+    "v766b", "v767a", "v767b",
+    "v767c", "v791a", "v763a",
+    "v763b", "v763c", "v501"
+  )
 
   ## Individual recode
   ir <- readRDS(ird_path)

@@ -10,7 +10,10 @@ extract_sexbehav_phia <- function(ind, survey_id) {
     "firstsxagedk", # Age at first vaginal sex (don't know)
     "part12monum", # Total sexual partners (past 12 months)
     "part12modkr", # Total sexual partners (past 12 months) (don't know)
-    paste0("partlivew", 1:3), # Does partner i live in this household
+    # Does partner i live in this household, where:
+    # 1 = Yes
+    # 2 = No
+    paste0("partlivew", 1:3),
     # Relationship to partner i, where:
     # 1 = Husband or wife
     # 2 = Live-in partner
@@ -72,6 +75,11 @@ extract_sexbehav_phia <- function(ind, survey_id) {
         (part12monum == 1) & ((!partrelation1 %in% cas_cats) & (!partrelation2 %in% cas_cats) & (!partrelation3 %in% cas_cats)) ~ TRUE,
         TRUE ~ FALSE
       ),
+      sexcohabspouse = case_when(
+        sexcohab == TRUE ~ TRUE,
+        (partrelation1 == 1) & (partlivew1 == 2) ~ TRUE,
+        TRUE ~ FALSE
+      ),
       # Reports one or more non-regular sexual partner
       sexnonreg = case_when(
         nosex12m == TRUE ~ FALSE,
@@ -101,6 +109,7 @@ extract_sexbehav_phia <- function(ind, survey_id) {
       # Just want the highest risk category that an individual belongs to
       nosex12m = ifelse(sexcohab | sexnonreg | sexpaid12m, FALSE, nosex12m),
       sexcohab = ifelse(sexnonreg | sexpaid12m, FALSE, sexcohab),
+      sexcohabspouse = ifelse(sexnonreg | sexpaid12m, FALSE, sexcohabspouse),
       sexnonreg = ifelse(sexpaid12m, FALSE, sexnonreg),
       # Turn everything from TRUE / FALSE coding to 1 / 0
       across(sex12m:sexnonregplus, ~ as.numeric(.x))
