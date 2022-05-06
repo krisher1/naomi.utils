@@ -20,7 +20,7 @@
 #' expand_survey_clusters(survey_clusters, areas_long, top_level = 1, bottom_level = 1)
 #'
 #' @noRd
-#' 
+#'
 expand_survey_clusters <- function(survey_clusters,
                                    survey_regions,
                                    areas,
@@ -411,11 +411,9 @@ calc_survey_hiv_indicators <- function(survey_meta,
   split_vars <- c("indicator", "survey_id", "area_level", "res_type", "sex", "age_group",others)
   extra_vars <- others
 
-
-  val <- calc_all_outcomes(ind, group_by_vars, split_vars,
-                           formula = ~ indicator + survey_id + area_id + res_type + sex + age_group +
-                             sex12m + eversex + sexcohab + sexnonreg + sexpaid12m + sti12m ,
+  val <- calc_all_outcomes(ind, group_by_vars, split_vars, formula,
                            extra_vars, survey_meta, areas, age_groups)
+
 
   val
 }
