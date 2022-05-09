@@ -361,9 +361,9 @@ calc_survey_hiv_indicators <- function(survey_meta,
   ## Include "other" vars stratified and all if !is.null(others)
   if(!is.null(others)) {
     for(i in 1:length(others)) {
-      ind[,names(ind) %in% others[i]] <- as.character(ind[,names(ind) %in% others[i]])
+      ind[[others[i]]] <- as.character(ind[[others[i]]])
       ind_ext <- ind
-      ind_ext[,names(ind_ext) %in% others[i]] <- "all"
+      ind_ext[[others[i]]] <- "all"
       ind <- dplyr::bind_rows(ind, ind_ext)
     }
   }
