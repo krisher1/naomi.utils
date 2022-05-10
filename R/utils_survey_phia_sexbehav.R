@@ -36,9 +36,6 @@ extract_sexbehav_phia <- function(ind, survey_id) {
   # * lifetimesexdk: Total lifetime sexual partners
   # * paste0("partlastsxtimed", 1:3): How long since last sex with partner i
 
-  # The categories considered "not cohabiting" (trying to match with DHS as much as possible)
-  cas_cats <- c(3, 4, 5, 6, 7, 8, 96)
-
   # Fix issues with particular surveys having different variable names
   if(survey_id %in% c("ZWE2016PHIA")) { ind <- rename(ind, "part12modkr" = "part12monumdk") }
   if(survey_id %in% c("ZMB2016PHIA")) { ind <- rename(ind, "part12monum" = "part12mo") }
@@ -72,21 +69,35 @@ extract_sexbehav_phia <- function(ind, survey_id) {
       # Reports sexual activity with exactly one cohabiting partner in the past 12 months
       sexcohab = case_when(
         sex12m == FALSE ~ FALSE,
-        (part12monum == 1) & ((!partrelation1 %in% cas_cats) & (!partrelation2 %in% cas_cats) & (!partrelation3 %in% cas_cats)) ~ TRUE,
+        (part12monum == 1) & ((partrelation1 == 2) | (partrelation2 == 2) | (partrelation2 == 2)) ~ TRUE,
+        (part12monum == 1) & ((partrelation1 == 1) & (partlivew1 == 1)) ~ TRUE,
+        (part12monum == 1) & ((partrelation2 == 1) & (partlivew2 == 1)) ~ TRUE,
+        (part12monum == 1) & ((partrelation3 == 1) & (partlivew3 == 1)) ~ TRUE,
         TRUE ~ FALSE
       ),
+      # Reports sexual activity with exactly one cohabiting partner or exactly one married partner who is living away
+      # Either the spouse lives in, in which case they are cohabiting, or they live away, in which case they are also
+      # covered here. So there is no need to check with the partlivew variable where the spouse is living.
       sexcohabspouse = case_when(
-        sexcohab == TRUE ~ TRUE,
-        (partrelation1 == 1) & (partlivew1 == 2) ~ TRUE,
+        sex12m == FALSE ~ FALSE,
+        (part12monum == 1) & (partrelation1 %in% c(1, 2)) ~ TRUE,
+        (part12monum == 1) & (partrelation2 %in% c(1, 2)) ~ TRUE,
+        (part12monum == 1) & (partrelation3 %in% c(1, 2)) ~ TRUE,
         TRUE ~ FALSE
       ),
-      # Reports one or more non-regular sexual partner
+      # Reports sexual activity with greater than one partner or any non-cohabiting partner
       sexnonreg = case_when(
         nosex12m == TRUE ~ FALSE,
+        sexcohab == TRUE ~ FALSE,
         part12monum > 1 ~ TRUE, # More than one partner
-        # One partner not cohabiting
-        (part12monum == 1) & ((partrelation1 %in% cas_cats) | (partrelation2 %in% cas_cats) | (partrelation3 %in% cas_cats)) ~ TRUE,
-        TRUE ~ FALSE
+        TRUE ~ TRUE
+      ),
+      # Reports sexual activity with greater than one partner or any non-marital non-cohabiting partner
+      sexnonregspouse = case_when(
+        nosex12m == TRUE ~ FALSE,
+        sexcohabspouse == TRUE ~ FALSE,
+        part12monum > 1 ~ TRUE, # More than one partner
+        TRUE ~ TRUE
       ),
       # Reports having exchanged gifts, cash, or anything else for sex in the past 12 months
       sexpaid12m = case_when(
@@ -106,13 +117,20 @@ extract_sexbehav_phia <- function(ind, survey_id) {
         sexpaid12m == TRUE ~ TRUE,
         TRUE ~ FALSE
       ),
+      # Either sexnonregspouse or sexpaid12m
+      sexnonregspouseplus = case_when(
+        sexnonregspouse == TRUE ~ TRUE,
+        sexpaid12m == TRUE ~ TRUE,
+        TRUE ~ FALSE
+      ),
       # Just want the highest risk category that an individual belongs to
       nosex12m = ifelse(sexcohab | sexnonreg | sexpaid12m, FALSE, nosex12m),
       sexcohab = ifelse(sexnonreg | sexpaid12m, FALSE, sexcohab),
-      sexcohabspouse = ifelse(sexnonreg | sexpaid12m, FALSE, sexcohabspouse),
+      sexcohabspouse = ifelse(sexnonregspouse | sexpaid12m, FALSE, sexcohabspouse),
       sexnonreg = ifelse(sexpaid12m, FALSE, sexnonreg),
+      sexnonregspouse = ifelse(sexpaid12m, FALSE, sexnonregspouse),
       # Turn everything from TRUE / FALSE coding to 1 / 0
-      across(sex12m:sexnonregplus, ~ as.numeric(.x))
+      across(sex12m:sexnonregspouseplus, ~ as.numeric(.x))
     ) %>%
     select(-all_of(sb_vars))
 }
@@ -125,17 +143,29 @@ extract_sexbehav_phia <- function(ind, survey_id) {
 check_survey_sexbehav <- function(survey_sexbehav) {
   df <- survey_sexbehav %>%
     mutate(
-      r_tot = nosex12m + sexcohab + sexnonreg + sexpaid12m
+      r_tot = nosex12m + sexcohab + sexnonreg + sexpaid12m,
+      r_tot_spouse = nosex12m + sexcohabspouse + sexnonregspouse + sexpaid12m
     )
 
   cat(
     paste0(
+      "Without spouse adjustment:\n",
       "The proportion of rows allocatated to one and only one category is ",
       round(sum(df$r_tot == 1) / nrow(df), 3) * 100, "%.\n",
       "The following rows are incorrectly allocated to multiple, or no, categories:\n"
     )
   )
 
-  df %>%
-    filter(r_tot != 1)
+  print(df %>% filter(r_tot != 1))
+
+  cat(
+    paste0(
+      "Under the spouse adjustment:\n",
+      "The proportion of rows allocatated to one and only one category is ",
+      round(sum(df$r_tot_spouse == 1) / nrow(df), 3) * 100, "%.\n",
+      "The following rows are incorrectly allocated to multiple, or no, categories:\n"
+    )
+  )
+
+  df %>% filter(r_tot_spouse != 1)
 }
