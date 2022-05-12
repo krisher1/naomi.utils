@@ -39,7 +39,7 @@ extract_sexbehav_phia <- function(ind, survey_id) {
   # Fix issues with particular surveys having different variable names
   if(survey_id %in% c("ZWE2016PHIA")) { ind <- rename(ind, "part12modkr" = "part12monumdk") }
   if(survey_id %in% c("ZMB2016PHIA")) { ind <- rename(ind, "part12monum" = "part12mo") }
-  if(survey_id %in% c("MWI2016PHIA")) { ind <- rename(ind, "par12modkr" = "part12monumdk") }
+  if(survey_id %in% c("MWI2016PHIA")) { ind <- rename(ind, "part12modkr" = "part12monumdk") }
 
   dat <- ind %>%
     mutate(
@@ -55,9 +55,10 @@ extract_sexbehav_phia <- function(ind, survey_id) {
     mutate(
       # Reports sexual activity in the last 12 months
       sex12m = case_when(
-        (is.na(firstsxage) & (firstsxagedk %in% c(96, -7))) ~ FALSE, # 96 is code for no sex
+        is.na(firstsxage) & is.na(firstsxagedk) ~ FALSE,
+        is.na(firstsxage) & firstsxagedk == 96 ~ FALSE, # 96 is code for no sex
         part12monum > 0 ~ TRUE,
-        part12modkr == -8 ~ TRUE, # If don't know number of partners, assume > 1
+        part12modkr == -8 ~ TRUE, # If don't know number of partners this year assume > 0
         TRUE ~ FALSE
       ),
       # Does not report sexual activity in the last 12 months
@@ -69,7 +70,7 @@ extract_sexbehav_phia <- function(ind, survey_id) {
       # Reports sexual activity with exactly one cohabiting partner in the past 12 months
       sexcohab = case_when(
         sex12m == FALSE ~ FALSE,
-        (part12monum == 1) & ((partrelation1 == 2) | (partrelation2 == 2) | (partrelation2 == 2)) ~ TRUE,
+        (part12monum == 1) & ((partrelation1 == 2) | (partrelation2 == 2) | (partrelation3 == 2)) ~ TRUE,
         (part12monum == 1) & ((partrelation1 == 1) & (partlivew1 == 1)) ~ TRUE,
         (part12monum == 1) & ((partrelation2 == 1) & (partlivew2 == 1)) ~ TRUE,
         (part12monum == 1) & ((partrelation3 == 1) & (partlivew3 == 1)) ~ TRUE,
@@ -89,15 +90,21 @@ extract_sexbehav_phia <- function(ind, survey_id) {
       sexnonreg = case_when(
         nosex12m == TRUE ~ FALSE,
         sexcohab == TRUE ~ FALSE,
+        (part12monum == 1) & !(partrelation1 == 2) ~ TRUE, # Any relation but live-in partner
+        (part12monum == 1) & !(partrelation2 == 2) ~ TRUE,
+        (part12monum == 1) & !(partrelation3 == 2) ~ TRUE,
         part12monum > 1 ~ TRUE, # More than one partner
-        TRUE ~ TRUE
+        TRUE ~ FALSE
       ),
       # Reports sexual activity with greater than one partner or any non-marital non-cohabiting partner
       sexnonregspouse = case_when(
         nosex12m == TRUE ~ FALSE,
         sexcohabspouse == TRUE ~ FALSE,
+        (part12monum == 1) & !(partrelation1 %in% c(1, 2)) ~ TRUE, # Any relation but live-in partner or spouse
+        (part12monum == 1) & !(partrelation2 %in% c(1, 2)) ~ TRUE,
+        (part12monum == 1) & !(partrelation3 %in% c(1, 2)) ~ TRUE,
         part12monum > 1 ~ TRUE, # More than one partner
-        TRUE ~ TRUE
+        TRUE ~ FALSE
       ),
       # Reports having exchanged gifts, cash, or anything else for sex in the past 12 months
       sexpaid12m = case_when(
