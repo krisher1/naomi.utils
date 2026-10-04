@@ -387,6 +387,9 @@ create_survey_clusters_dhs <- function(surveys) {
     ged$path <-  unlist(rdhs::get_datasets(ged))
 
     ge <- lapply(ged$path, readRDS)
+    ge <- lapply(ge, function(x) {
+      if(class(x)[1] == "sf") as_Spatial(x) else x
+    })
     ge <- lapply(ge, as.data.frame)
     ge <- Map(f = dplyr::mutate,
               ge,
